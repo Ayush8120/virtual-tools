@@ -14,3 +14,5 @@ After installing needed dependencies, a good place to start to understand how to
 
 You can also play the game directly in your browser here: [http://scripts.mit.edu/~k2smith/toolgames/](http://scripts.mit.edu/~k2smith/toolgames/)
 
+trial-commit
+
