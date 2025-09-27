@@ -182,7 +182,7 @@ def demonstrateWorld(world, hz = 30.):
             dispFinish = False
     pg.quit()
 
-def demonstrateTPPlacement(toolpicker, toolname, position, maxtime=20.,
+def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=20.,
                            noise_dict=None, hz=30.):
     tps = 1./hz
     toolpicker.bts = tps
@@ -202,12 +202,22 @@ def demonstrateTPPlacement(toolpicker, toolname, position, maxtime=20.,
     i = 0
     dispFinish = True
 
-
-    frames = toolpicker._get_image_array(toolpicker._worlddict, pth, sample_ratio=1)
+    # if wd is passed then you get the tool in the viz if toolpicker._worlddict is passed then you dont get that tool
+    frames = toolpicker._get_image_array(wd, pth, sample_ratio=memory_bank._sample_ratio)
     print(f"Got {len(frames)} frames")
     print(f"Each frame shape: {frames[0].shape}")
-
-    visualizePath(toolpicker._worlddict, pth)
+    memory_bank.add_episode(frames)
+    memory_bank.results.append(ocm)
+    
+    # path viz : not useful
+    # sc = drawPathSingleImageWithTools(toolpicker, pth, pathSize=3, lighten_amt=.5, worlddict = toolpicker._worlddict, with_tools=True)
+    # pg.image.save(sc, "/home/ayhaos/gen-tool-use/path_summary.png")
+    # print('saved!')
+    
+    # viz of episode without showing the tool
+    # visualizePath(toolpicker._worlddict, pth)
+    
+    #viz of the episode
     while t < etime:
         for onm, o in world.objects.items():
             if not o.isStatic():
@@ -255,6 +265,10 @@ def visualizePath(worlddict, path, hz=30.):
     pg.quit()
 
 def makeImageArray(worlddict, path, sample_ratio=1):
+    
+    '''
+    doesn't put tool in the visualization
+    '''
     world = loadFromDict(worlddict)
     #pg.init()
     images = [drawWorld(world)]
