@@ -201,6 +201,13 @@ def demonstrateTPPlacement(toolpicker, toolname, position, maxtime=20.,
     t = 0
     i = 0
     dispFinish = True
+
+
+    frames = toolpicker._get_image_array(toolpicker._worlddict, pth, sample_ratio=1)
+    print(f"Got {len(frames)} frames")
+    print(f"Each frame shape: {frames[0].shape}")
+
+    visualizePath(toolpicker._worlddict, pth)
     while t < etime:
         for onm, o in world.objects.items():
             if not o.isStatic():

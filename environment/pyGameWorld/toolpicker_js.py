@@ -270,7 +270,8 @@ class ToolPicker(object):
             wd = updateObjects(wd, objAdjust)
         return self._ctx.call('getGWStatePath', wd, maxtime, self.bts,
                               {}, returnDict)
-
+    
+    # diff from observePlacementPath -- this also gives rotation info
     def observeFullPlacementPath(self, toolname, position, maxtime=20.,
                                  returnDict=False, stopOnGoal=True,
                                  objAdjust=None):
