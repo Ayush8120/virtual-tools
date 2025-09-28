@@ -208,7 +208,12 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
     print(f"Each frame shape: {frames[0].shape}")
     memory_bank.add_episode(frames)
     memory_bank.results.append(ocm)
-    
+    memory_bank.metadata.apppend({"sim": "virtual_tools",
+                                  "wd": wd,
+                                  "path": pth,
+                                  "toolname": toolname,
+                                  "posn": position,
+                                  "status": str(ocm)})
     # path viz : not useful
     # sc = drawPathSingleImageWithTools(toolpicker, pth, pathSize=3, lighten_amt=.5, worlddict = toolpicker._worlddict, with_tools=True)
     # pg.image.save(sc, "/home/ayhaos/gen-tool-use/path_summary.png")
