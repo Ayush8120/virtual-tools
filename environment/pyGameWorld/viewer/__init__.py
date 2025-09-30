@@ -183,9 +183,9 @@ def demonstrateWorld(world, hz = 30.):
     pg.quit()
 
 def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=20.,
-                           noise_dict=None, hz=30.):
+                           noise_dict=None, hz=10.):
     tps = 1./hz
-    toolpicker.bts = tps
+    toolpicker.bts = tps #wow. they changed the basictimestep here -- so hz does control your number of frames you save.
     if noise_dict:
         pth, ocm, etime, wd = toolpicker.runFullNoisyPath(toolname, position, maxtime, returnDict=True, **noise_dict)
     else:
@@ -208,7 +208,7 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
     print(f"Each frame shape: {frames[0].shape}")
     memory_bank.add_episode(frames)
     memory_bank.results.append(ocm)
-    memory_bank.metadata.apppend({"sim": "virtual_tools",
+    memory_bank.metadata.append({"sim": "virtual_tools",
                                   "wd": wd,
                                   "path": pth,
                                   "toolname": toolname,
