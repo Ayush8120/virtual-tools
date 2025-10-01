@@ -249,6 +249,7 @@ class ToolPicker(object):
         tool = self._tools[toolname]
         # Make sure the tool can be placed
         if self.checkPlacementCollide(toolname, position):
+            print('Tool Collision!')
             return None, None, -1
         if stopOnGoal:
             wd = self._worlddict
@@ -279,6 +280,7 @@ class ToolPicker(object):
         tool = self._tools[toolname]
         # Make sure the tool can be placed
         if self.checkPlacementCollide(toolname, position):
+            print('Tool Collision! Resample your tool action!')
             return None, None, -1, None
         if stopOnGoal:
             wd = self._worlddict
