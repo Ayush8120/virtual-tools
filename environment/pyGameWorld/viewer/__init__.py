@@ -156,7 +156,18 @@ def drawWorldWithTools(tp, backgroundOnly=False, worlddict=None):
         newsc.fill(col)
         toolsc = _draw_tool(tp._tools[t], maketoolpt, [90,90])
         newsc.blit(toolsc, [3, 3])
+        newsc = addNumber(newsc, i)
         s.blit(newsc, (630, 137 + 110*i))
+        print('added')
+    return s
+
+def addNumber(s, i):
+    font = pg.font.SysFont('arial', 20)
+    text = font.render(str(i+1), True, (255, 255, 255))  # White text
+    text_rect = text.get_rect()
+    text_rect.center =  (s.get_width() // 2, s.get_height() // 2)
+    # pg.draw.rect(s, (255,255,255), text_rect.inflate(4, 4))  # White background
+    s.blit(text, text_rect)
     return s
 
 def demonstrateWorld(world, hz = 30.):
@@ -301,12 +312,12 @@ def makeImageArrayNoPath(worlddict, path_length):
     nsteps = path_length
     return images*int(nsteps)
 
-def visualizeScreen(tp):
-    #pg.init()
+def visualizeScreen(tp, name):
+    pg.init()
     pg.display.set_mode((10,10))
     s = drawWorldWithTools(tp, backgroundOnly=False)
     i = s.convert_alpha()
-    pg.image.save(i, 'test.png')
+    pg.image.save(i, f'{name}')
     pg.quit()
 
 def drawPathSingleImageWithTools(tp, path, pathSize=3, lighten_amt=.5, worlddict=None, with_tools=False):
@@ -526,6 +537,7 @@ def drawTool(tool, color=(0,0,255), toolbox_size=(90, 90)):
     s.fill((255,255,255))
     for poly in tool:
         pg.draw.polygon(s, color, [resc(p) for p in poly])
+        
 
     s_arr = pg.surfarray.array3d(s)
     return s_arr
