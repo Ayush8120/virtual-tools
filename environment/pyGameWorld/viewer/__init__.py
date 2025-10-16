@@ -201,6 +201,9 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
         pth, ocm, etime, wd = toolpicker.runFullNoisyPath(toolname, position, maxtime, returnDict=True, **noise_dict)
     else:
         pth, ocm, etime, wd = toolpicker.observeFullPlacementPath(toolname, position, maxtime, returnDict=True)
+    if pth is None:
+        return -1
+    
     world = loadFromDict(wd)
     print (ocm)
     pg.init()
@@ -213,6 +216,7 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
     i = 0
     dispFinish = True
 
+    
     # if wd is passed then you get the tool in the viz if toolpicker._worlddict is passed then you dont get that tool
     frames = toolpicker._get_image_array(wd, pth, sample_ratio=memory_bank._sample_ratio)
     print(f"Got {len(frames)} frames")
@@ -220,11 +224,11 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
     memory_bank.add_episode(frames)
     memory_bank.results.append(ocm)
     memory_bank.metadata.append({"sim": "virtual_tools",
-                                  "wd": wd,
-                                  "path": pth,
-                                  "toolname": toolname,
-                                  "posn": position,
-                                  "status": str(ocm)})
+                                "wd": wd,
+                                "path": pth,
+                                "toolname": toolname,
+                                "posn": position,
+                                "status": str(ocm)})
     # path viz : not useful
     # sc = drawPathSingleImageWithTools(toolpicker, pth, pathSize=3, lighten_amt=.5, worlddict = toolpicker._worlddict, with_tools=True)
     # pg.image.save(sc, "/home/ayhaos/gen-tool-use/path_summary.png")
@@ -246,9 +250,10 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
         for e in pg.event.get():
             if e.type == QUIT:
                 pg.quit()
-                return
+                return 0
     pg.quit()
-
+    return 1
+    
 def visualizePath(worlddict, path, hz=30.):
     world = loadFromDict(worlddict)
     pg.init()
