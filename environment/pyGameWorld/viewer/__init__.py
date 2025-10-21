@@ -7,6 +7,8 @@ from ..world import *
 from ..constants import *
 from ..object import *
 from pygame.constants import *
+from PIL import Image
+
 #from .visualize_likelihoods import *
 import pdb
 __all__ = ['drawWorld', 'demonstrateWorld', 'demonstrateTPPlacement',
@@ -163,9 +165,10 @@ def drawWorldWithTools(tp, backgroundOnly=False, worlddict=None):
 
 def addNumber(s, i):
     font = pg.font.SysFont('arial', 20)
-    text = font.render(str(i+1), True, (255, 255, 255))  # White text
+    text = font.render(str(i+1), True, (255, 0, 0))  # White text
     text_rect = text.get_rect()
-    text_rect.center =  (s.get_width() // 2, s.get_height() // 2)
+    # text_rect.center =  (s.get_width() // 2, s.get_height() // 2)
+    text_rect.topleft = (5, 5)
     # pg.draw.rect(s, (255,255,255), text_rect.inflate(4, 4))  # White background
     s.blit(text, text_rect)
     return s
@@ -230,10 +233,6 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
                                 "posn": position,
                                 "status": str(ocm)})
     # path viz : not useful
-    # sc = drawPathSingleImageWithTools(toolpicker, pth, pathSize=3, lighten_amt=.5, worlddict = toolpicker._worlddict, with_tools=True)
-    # pg.image.save(sc, "/home/ayhaos/gen-tool-use/path_summary.png")
-    # print('saved!')
-    
     # viz of episode without showing the tool
     # visualizePath(toolpicker._worlddict, pth)
     
@@ -251,6 +250,18 @@ def demonstrateTPPlacement(toolpicker, memory_bank, toolname, position, maxtime=
             if e.type == QUIT:
                 pg.quit()
                 return 0
+    
+    sc = drawPathSingleImageWithTools(toolpicker, pth, pathSize=3, lighten_amt=.5, worlddict = wd, with_tools=True)
+    # pg.image.save(sc, "/home/ayhaos/gen-tool-use/combined_trajectory.png")
+    img_str = pg.image.tostring(sc, 'RGB')
+    memory_bank.combinedTraj = Image.frombytes('RGB', sc.get_size(), img_str)
+    
+    # sc2 = drawPathSingleImage(wd, pth)
+    # pg.image.save(sc, "/home/ayhaos/gen-tool-use/path_summary_2.png")
+
+    indiv_imgs = drawIndividualPaths(toolpicker, pth, wd, gradient=True)
+    memory_bank.indiv_img_dicts = indiv_imgs
+    
     pg.quit()
     return 1
     
@@ -379,6 +390,7 @@ def drawPathSingleImageWithTools(tp, path, pathSize=3, lighten_amt=.5, worlddict
     return sc
 
 def drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5):
+    #all path same color -- no gradients
     # set up the drawing
     world = loadFromDict(worlddict)
     sc = drawWorld(world, backgroundOnly=True)
@@ -419,6 +431,7 @@ def drawPathSingleImage(worlddict, path, pathSize=3, lighten_amt=.5):
 
 
 def drawMultiPathSingleImage(worlddict, path_set, pathSize=3, lighten_amt=.5):
+    #to visualise multiple solution attempts
     # set up the drawing
     world = loadFromDict(worlddict)
 
@@ -533,6 +546,135 @@ def drawMultiPathSingleImageBasic(sc, world, path_set, pathSize=3, lighten_amt=.
                     o.setPos(path[onm][-1])
                 _draw_obj(o, sc, makept)
     return sc
+
+# Add this method to ToolPicker class
+def drawIndividualPaths(tp, path, worlddict, gradient=False, with_tools=False):
+    """
+    Generate separate trajectory images for each moving object
+    
+    Returns:
+        dict: {object_name: image_array}
+    """
+    if gradient:
+        return drawIndividualObjectPathsGradient(tp, 
+            path, with_tools=with_tools, worlddict=worlddict
+        )
+    else:
+        return drawIndividualObjectPaths(worlddict, path)
+    
+    # # Convert to numpy arrays
+    # return {
+    #     onm: pg.surfarray.array3d(img).swapaxes(0,1) 
+    #     for onm, img in imgs_dict.items()
+    # }
+
+def drawIndividualObjectPaths(worlddict, path, pathSize=3, lighten_amt=.5):
+    """
+    Returns a dict mapping object_name -> image showing only that object's trajectory
+    """
+    world = loadFromDict(worlddict)
+    individual_images = {}
+    
+    def makept(p):
+        return [int(i) for i in world._invert(p)]
+    
+    # Iterate through each non-static object
+    for onm, o in world.objects.items():
+        if not o.isStatic():
+            # Create fresh canvas for this object
+            sc = drawWorld(world, backgroundOnly=True)
+            
+            # Get color
+            if o.type == 'Container':
+                col = o.outer_color
+            else:
+                col = o.color
+            pthcol = _lighten_rgb(col, lighten_amt)
+            
+            # Extract positions
+            if len(path[onm]) == 2:
+                poss = path[onm][0]
+            else:
+                poss = [path[onm][i][0:2] for i in range(len(path[onm]))]
+            
+            # Draw path for this object only
+            pts = _filter_unique([makept(p) for p in poss])
+            if len(pts) > 1:
+                pg.draw.lines(sc, pthcol, False, pts, pathSize)
+            
+            # Draw initial position (lightened)
+            _draw_obj(o, sc, makept, lighten_amt=lighten_amt)
+            
+            # Draw final position
+            if len(path[onm]) == 2:
+                o.setPos(path[onm][0][-1])
+                o.setRot(path[onm][1][-1])
+            else:
+                o.setPos(path[onm][-1][0:2])
+            _draw_obj(o, sc, makept)
+            
+            img_str = pg.image.tostring(sc, 'RGB')
+            individual_images[onm] = Image.frombytes('RGB', sc.get_size(), img_str)
+    
+    return individual_images
+
+def drawIndividualObjectPathsGradient(tp, path, pathSize=3, lighten_amt=.5, 
+                                      worlddict=None, with_tools=False):
+    """
+    Like drawIndividualObjectPaths but with gradient coloring
+    """
+    if worlddict is None:
+        worlddict = tp._worlddict
+    world = loadFromDict(worlddict)
+    individual_images = {}
+    
+    def makept(p):
+        return [int(i) for i in world._invert(p)]
+    
+    for onm, o in world.objects.items():
+        if not o.isStatic():
+            # Fresh canvas
+            if not with_tools:
+                sc = drawWorld(world, backgroundOnly=True)
+            else:
+                sc = drawWorldWithTools(tp, backgroundOnly=True, worlddict=worlddict)
+            
+            # Get color
+            if o.type == 'Container':
+                col = o.outer_color
+            else:
+                col = o.color
+            
+            # Extract positions
+            if len(path[onm]) == 2:
+                poss = path[onm][0]
+            else:
+                poss = [path[onm][i][0:2] for i in range(len(path[onm]))]
+            
+            pts = _filter_unique([makept(p) for p in poss])
+            
+            # Draw gradient path
+            if len(pts) > 1:
+                steps = len(pts)
+                cols = [_lighten_rgb(col, amt=0.9*step/steps) for step in range(steps)]
+                for i, pt in enumerate(pts[:-1]):
+                    color = cols[i]
+                    pg.draw.line(sc, color, pt, pts[i+1], 3)
+            
+            # Draw initial (lightened) and final positions
+            _draw_obj(o, sc, makept, lighten_amt=lighten_amt)
+            
+            if len(path[onm]) == 2:
+                o.setPos(path[onm][0][-1])
+                o.setRot(path[onm][1][-1])
+            else:
+                o.setPos(path[onm][-1][0:2])
+            _draw_obj(o, sc, makept)
+            
+            img_str = pg.image.tostring(sc, 'RGB')
+            individual_images[onm] = Image.frombytes('RGB', sc.get_size(), img_str)
+    
+    return individual_images
 
 def drawTool(tool, color=(0,0,255), toolbox_size=(90, 90)):
     s = pg.Surface(toolbox_size)
