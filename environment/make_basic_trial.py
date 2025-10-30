@@ -66,6 +66,6 @@ with open(json_dir+tnm+'.json','r') as f:
 tp = ToolPicker(btr)
 
 # View that placement
-visualizeScreen(tp)
-demonstrateTPPlacement(tp, 'obj2', (400, 400))
+# visualizeScreen(tp)
+demonstrateTPPlacement(tp,  'obj2', (400, 400))
 
