@@ -5,6 +5,10 @@ from .object import *
 __all__ = ["PGCond_AnyInGoal", "PGCond_SpecificInGoal", "PGCond_AnyTouch",
            "PGCond_SpecificTouch", "PGCond_ManyInGoal"]
 
+'''
+@ayush
+can add more goal conditions here -- follows the "observer" design pattern
+'''
 class PGCond_Base(object):
 
     def __init__(self):
@@ -142,7 +146,7 @@ class PGCond_AnyTouch(PGCond_Base):
 
     def _endTouch(self, obj, goal):
         if obj.name == self.goal or goal.name == self.goal:
-            sefl.tin = -1
+            self.tin = -1
 
     def attachHooks(self):
         self.parent.setSolidCollisionBegin(self._beginTouch)
