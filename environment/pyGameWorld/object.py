@@ -106,12 +106,12 @@ class PGObject(object):
         assert not self.isStatic(), "Cannot kick a static object"
         if not unsafe:
             for s in self._exposeShapes():
-                if not s.point_query(position):
+                if s.point_query(position).distance > 0:
                     raise AssertionError("Must kick an object within the object (or set as unsafe)")
         self._cpBody.apply_impulse_at_world_point(impulse, position)
 
     def distanceFromPoint(self, point):
-        d, _ = self._cpShape.point_query(point)
+        d = self._cpShape.point_query(point).distance
         return d
 
     # Add pythonic decorators
@@ -242,8 +242,8 @@ class PGSeg(PGObject):
             space.add(self._cpShape)
         else:
             pos = pm.Vec2d((p1[0] + p2[0]) / 2., (p1[1] + p2[1]) / 2.)
-            v1 = pm.Vec2d(p1) - pos
-            v2 = pm.Vec2d(p2) - pos
+            v1 = pm.Vec2d(*p1) - pos
+            v2 = pm.Vec2d(*p2) - pos
             imom = pm.moment_for_segment(mass, v1, v2, 0)
             self._cpBody = pm.Body(mass, imom)
             self._cpShape = pm.Segment(self._cpBody, v1, v2, self.r)
@@ -286,14 +286,14 @@ class PGContainer(PGObject):
         if density != 0:
             ptlist = recenterPoly(ptlist)
         #self.seglist = map(lambda p: pm.Vec2d(p), ptlist)
-        self.seglist = [pm.Vec2d(p) for p in ptlist]
+        self.seglist = [pm.Vec2d(*p) for p in ptlist]
 
         self._area = np.pi * self.r * self.r
         imom = 0
         for i in range(len(self.seglist)-1):
             v1 = self.seglist[i]
             v2 = self.seglist[i+1]
-            larea = 2*self.r* v1.get_distance(v2)
+            larea = 2*self.r* (v1 - v2).length
             self._area += larea
             imom += pm.moment_for_segment(larea*density, v1, v2, 0)
 
@@ -339,7 +339,7 @@ class PGContainer(PGObject):
             for i in range(len(self.polylist)):
                 tpol = []
                 for j in range(len(self.polylist[i])):
-                    vj = pm.Vec2d(self.polylist[i][j])
+                    vj = pm.Vec2d(*self.polylist[i][j])
                     tpol.append(np.array(pos + vj.rotated(rot)))
                 polys.append(tpol)
         return polys
@@ -383,7 +383,7 @@ class PGContainer(PGObject):
         return self._cpPolyShapes
 
     def distanceFromPoint(self, point):
-        d, _ = self._cpSensor.point_query(point)
+        d = self._cpSensor.point_query(point).distance
         return d
 
     def getArea(self):
@@ -419,7 +419,7 @@ class PGCompound(PGObject):
                 sh.name = name
                 space.add(sh)
                 self._cpShapes.append(sh)
-                self.polylist.append([pm.Vec2d(p) for p in vertices])
+                self.polylist.append([pm.Vec2d(*p) for p in vertices])
 
             gx = gy = 0
             for pc, a in zip(polyCents, areas):
@@ -452,11 +452,13 @@ class PGCompound(PGObject):
             for pc, a, verts in zip(polyCents, areas, polygons):
                 pos = pm.Vec2d(pc[0] - loc.x, pc[1] - loc.y)
                 imom += pm.moment_for_poly(density*a, vertices, pos)
-                rcverts = [pm.Vec2d([p[0]+pos.x, p[1]+pos.y]) for p in verts]
+                rcverts = [pm.Vec2d(p[0]+pos.x, p[1]+pos.y) for p in verts]
                 self._cpShapes.append(pm.Poly(None, rcverts))
                 self.polylist.append(rcverts)
             mass = self._area*density
             self._cpBody = pm.Body(mass, imom)
+            self._cpBody.position = loc
+            space.add(self._cpBody)
             for sh in self._cpShapes:
                 sh.body = self._cpBody
                 sh.elasticity = elasticity
@@ -464,8 +466,6 @@ class PGCompound(PGObject):
                 sh.collision_type = COLTYPE_SOLID
                 sh.name = name
                 space.add(sh)
-            self._cpBody.position = loc
-            space.add(self._cpBody)
 
     def getPolys(self):
         if self.isStatic():
@@ -516,7 +516,7 @@ class PGCompound(PGObject):
     area = property(getArea)
 
     def distanceFromPoint(self, point):
-        dists = [s.point_query(point) for s in self._cpShapes]
+        dists = [s.point_query(point).distance for s in self._cpShapes]
         return min(dists)
 
 
@@ -537,7 +537,7 @@ class PGGoal(PGObject):
 
     def pointIn(self,p):
         v = pm.Vec2d(p[0], p[1])
-        return self._cpShape.point_query(v)
+        return self._cpShape.point_query(v).distance <= 0
 
     vertices = property(getVertices)
 
@@ -559,6 +559,6 @@ class PGBlocker(PGObject):
 
     def pointIn(self, p):
         v = pm.Vec2d(p[0], p[1])
-        return self._cpShape.point_query(v)
+        return self._cpShape.point_query(v).distance <= 0
 
     vertices = property(getVertices)
